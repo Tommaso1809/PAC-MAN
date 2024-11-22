@@ -3,184 +3,151 @@
  *Description:Implementazione del Pacman Naive in C++,muoviti con i tasti WASD
  */
 #include <iostream>
-#include <cstdlib>
 #include <ctime>
 #include <conio.h>
 #include <windows.h>
 #include <unistd.h>
-using namespace std;
+#include <vector>
 
-void stampa_mappa(char[][32]);
-void genera_posizione(char[][32]);
-void controllo(char[][32]);
-char pacman={'@'};
+struct Position {
+    int x;
+    int y;
+};
 
-char enemy={'x'};
-int a,b,i=1,j=1;
-char tasto;
-
-int main(){
+class PacmanGame {
+private:
+    static constexpr char WALL = '#';
+    static constexpr char EMPTY = ' ';
+    static constexpr char PACMAN = '@';
+    static constexpr char ENEMY = 'x';
+    static constexpr int MAP_HEIGHT = 18;
+    static constexpr int MAP_WIDTH = 31;
     
-    srand(time(NULL));
-	
-	
-	cout<<"BENVENUTO IN PACMAN !! "<<endl;
-	cout<<"TU = @ \n";
-	cout<<"NEMICO = x \n";
-	cout<<"\n";
-	sleep(2);
-	    
-   char mappa[32][32] = {
-	"###############################",
-	"#                             #",
-	"#                             #",
-	"### ########### ##   ##########",
-	"#                             #",
-	"#  ###        #####           #",
-	"#          ###    #####       #",
-	"########         ##           #",
-	"#           ###               #",
-	"# ##### ###         ##        #",
-	"#          ######  ####### ####",
-	"#                             #",
-	"## ### ####      ###   ########",
-	"#           ####     #        #",
-	"#                             #",
-	"#   ##########   ##########   #",
-	"#                             #",
-	"###############################"
-	};
-	
-	
-
-    mappa[i][j]=pacman;
-
-    genera_posizione(mappa);
-
-
-   return 0; 
-}
-
-void stampa_mappa(char mappa[][32]){
-
-	
-    for(int i=0;i<18;i++){
-
-        for(int j=0;j<32;j++){
-
-            cout<<mappa[i][j];
-            
+    std::vector<std::vector<char>> gameMap;
+    Position pacmanPos{1, 1};
+    Position enemyPos;
+    
+    void generateMaze() {
+        // Fill map with walls
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            for (int x = 0; x < MAP_WIDTH; x++) {
+                gameMap[y][x] = WALL;
+            }
         }
-        cout<<endl;
+        
+        // Start from position (1,1)
+        carvePassage(1, 1);
+        
+        // Ensure borders are walls
+        for (int x = 0; x < MAP_WIDTH; x++) {
+            gameMap[0][x] = WALL;
+            gameMap[MAP_HEIGHT-1][x] = WALL;
+        }
+        for (int y = 0; y < MAP_HEIGHT; y++) {
+            gameMap[y][0] = WALL;
+            gameMap[y][MAP_WIDTH-1] = WALL;
+        }
+        
+        // Add some random openings for better gameplay
+        addRandomOpenings();
     }
+
+    void carvePassage(int x, int y) {
+        const int directions[4][2] = {{0,2}, {2,0}, {0,-2}, {-2,0}}; // right, down, left, up
+        std::vector<int> dirs = {0,1,2,3};
         
-}
-
-void genera_posizione(char mappa[][32]){
-
-    char scelta;
-    
-    do{
-        i=1,j=1;
-        mappa[i][j]=pacman;
-        a=rand()%16+1;
-        b=rand()%30+1;
-        mappa[a][b]=enemy;
-
-        stampa_mappa(mappa);
-    
-        controllo(mappa);
-        
-        
-            
-        cout<<endl;
-        cout<<"HAI VINTO BRAVO/A !!!!"<<endl;
-        cout<<endl;
-        mappa[i][j]=' ';
-        cout<<"Vuoi Giocare ancora s|n "<<endl;
-        cin>>scelta;
-        system("CLS");
-    }while(scelta!='n');
-
-    cout<<"GAME FINISH"<<endl;
-  
-}
-
-void controllo(char mappa[][32] ){
-    
-    cout<<"Muoviti con i tasti WASD"<<endl;
-
-    do{
-    
-         tasto=getch();
-        
-         switch(tasto){
-        
-        case 'w':
-           
-            if(mappa[i-1][j]!='#'){
-
-                i--;
-                mappa[i+1][j]=' ';
-                mappa[i][j]=pacman;
-            	system("CLS");
-            }
-            
-             stampa_mappa(mappa);
-             
-        	
-        break;
-        
-        case 'a':
-
-            if(mappa[i][j-1]!='#'){
-                
-                  j--;
-                mappa[i][j+1]=' ';
-                mappa[i][j]=pacman;
-                
-                system("CLS");
-            }
-
-             stampa_mappa(mappa);
-            
-        
-        break;
-        
-        case 's':
-            
-            if(mappa[i+1][j]!='#'){
-                
-                 i++;
-                mappa[i-1][j]=' ';
-                mappa[i][j]=pacman;
-                
-                system("CLS");
-            }
-
-            stampa_mappa(mappa);
-
-            
-        break;
-        
-        case 'd':
-        
-            if(mappa[i][j+1]!='#'){
-                
-                j++;
-                mappa[i][j-1]=' ';
-                mappa[i][j]=pacman;
-
-				system("CLS");	
-            }
-            
-            stampa_mappa(mappa);
-        break;    
-            
+        // Randomize directions
+        for (int i = dirs.size()-1; i > 0; i--) {
+            int j = rand() % (i+1);
+            std::swap(dirs[i], dirs[j]);
         }
-     
-        
-    
-    }while(mappa[i][j]!=mappa[a][b]);
 
-}    
+        gameMap[y][x] = EMPTY;
+
+        // Try each direction
+        for (int dir : dirs) {
+            int dx = directions[dir][0];
+            int dy = directions[dir][1];
+            int newX = x + dx;
+            int newY = y + dy;
+            
+            if (newX > 0 && newX < MAP_WIDTH-1 && 
+                newY > 0 && newY < MAP_HEIGHT-1 && 
+                gameMap[newY][newX] == WALL) {
+                // Carve passage
+                gameMap[y + dy/2][x + dx/2] = EMPTY;
+                carvePassage(newX, newY);
+            }
+        }
+    }
+
+    void addRandomOpenings() {
+        const int numOpenings = (MAP_WIDTH * MAP_HEIGHT) / 20; // 5% of map size
+        
+        for (int i = 0; i < numOpenings; i++) {
+            int x = 1 + rand() % (MAP_WIDTH - 2);
+            int y = 1 + rand() % (MAP_HEIGHT - 2);
+            if (gameMap[y][x] == WALL) {
+                // Check if removing this wall won't create a 2x2 empty space
+                int emptyNeighbors = 0;
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        if (gameMap[y+dy][x+dx] == EMPTY) emptyNeighbors++;
+                    }
+                }
+                if (emptyNeighbors < 5) {
+                    gameMap[y][x] = EMPTY;
+                }
+            }
+        }
+    }
+    
+public:
+    PacmanGame() {
+        initializeMap();
+        generateEnemyPosition();
+    }
+    
+    void initializeMap() {
+        gameMap.resize(MAP_HEIGHT, std::vector<char>(MAP_WIDTH));
+        generateMaze();
+        gameMap[pacmanPos.y][pacmanPos.x] = PACMAN;
+    }
+    
+    void generateEnemyPosition() {
+        do {
+            enemyPos.x = rand() % (MAP_WIDTH - 2) + 1;
+            enemyPos.y = rand() % (MAP_HEIGHT - 2) + 1;
+        } while (gameMap[enemyPos.y][enemyPos.x] != EMPTY);
+        
+        gameMap[enemyPos.y][enemyPos.x] = ENEMY;
+    }
+    
+    void displayMap() const {
+        for (const auto& row : gameMap) {
+            for (char cell : row) {
+                std::cout << cell;
+            }
+            std::cout << '\n';
+        }
+    }
+    
+    void start() {
+        std::cout << "BENVENUTO IN PACMAN !!\n";
+        std::cout << "TU = " << PACMAN << '\n';
+        std::cout << "NEMICO = " << ENEMY << '\n';
+        std::cout << '\n';
+        sleep(2);
+        
+        displayMap();
+    }
+};
+
+int main() {
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+    
+    PacmanGame game;
+    game.start();
+    
+    return 0;
+}
